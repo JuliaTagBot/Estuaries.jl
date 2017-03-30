@@ -1,4 +1,4 @@
-The Gradine.jl package is licensed under the MIT "Expat" License:
+The Gradines.jl package is licensed under the MIT "Expat" License:
 
 > Copyright (c) 2017: ExpandingMan.
 > 
