@@ -1,21 +1,20 @@
 
-
 # TODO working on regular column first, then I'll work on this version
 # will probably go into a separate file
-type NullableGradineColumn{T} <: AbstractGradineColumn{T}
+struct NullableGradineColumn{T} <: AbstractGradineColumn{T}
     values::HDF5Dataset
     isnull::HDF5Dataset
 
-    function NullableGradineColumn(values::HDF5Dataset, isnull::HDF5Dataset)
+    function NullableGradineColumn{T}(values::HDF5Dataset, isnull::HDF5Dataset) where T
         new(values, isnull)
     end
 end
 
-type GradineColumn{T} <: AbstractGradineColumn{T}
+struct GradineColumn{T} <: AbstractGradineColumn{T}
     values::HDF5Dataset
     eltype::Type{T}
 
-    GradineColumn{T}(values::HDF5Dataset) = new(values, T)
+    GradineColumn{T}(values::HDF5Dataset) where T = new(values, T)
 end
 export GradineColumn
 

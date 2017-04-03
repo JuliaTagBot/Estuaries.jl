@@ -1,6 +1,5 @@
 
-
-typealias ColumnIndex Union{Integer, Symbol}
+const ColumnIndex = Union{Integer, Symbol}
 
 
 type Gradine <: AbstractGradine
@@ -34,6 +33,7 @@ Base.size(g::Gradine) = (nrow(g), ncol(g))
 Base.size(g::Gradine, idx::Integer) = size(g)[idx]
 DataTables.index(g::Gradine) = g.colindex
 DataTables.eltypes(g::Gradine) = eltype.(g.columns)
+export DataTables.eltypes
 Base.names(g::Gradine) = names(index(g))
 
 columns_group(g::Gradine) = g.grp["columns"]

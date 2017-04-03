@@ -33,10 +33,8 @@ import HDF5.name
 
 =#
 
-abstract AbstractGradine
-abstract AbstractGradineColumn{T}
 
-
+include("abstracts.jl")
 include("gradine.jl")
 include("gradinecolumn.jl")
 include("utils.jl")
