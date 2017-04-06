@@ -15,5 +15,6 @@ g[:y1] = rand(nrows)
 g[:y2] = 5
 g[:y3] = [randstring(5) for i ∈ 1:nrows]
 g[:y4] = NullableArray(rand(nrows))
+g[:y5] = [DateTime() + Dates.Day(i) for i ∈ 1:nrows]
 
 

@@ -71,7 +71,7 @@ getindex(g::Gradine, colon::Colon) = copy(g)
 # g[SingleRowIndex, SingleColumnIndex] ⇒ Scalar
 function getindex(g::Gradine, row_ind::Integer, col_ind::ColumnIndex)
     selected_col = index(g)[col_ind]
-    g.columns[selected_col][row_ind]
+    g.columns[selected_col][row_ind][1]
 end
 
 # SingleRowIndex, MultiColumnIndex ⇒ DataTable
@@ -432,14 +432,32 @@ Base.delete!(g::Gradine, c::Any) = delete!(g, index(g)[c])
 #=========================================================================================
     <constructors>
 =========================================================================================#
-function Gradine(grp::GrdGroup)
-    if "columns" ∈ names(grp)
-        colnames = names(grp["columns"])
-        cols = [gradinecolumn(grp["columns"][n]) for n ∈ colnames]
-        return Gradine(grp, cols, DataTables.Index(Symbol.(colnames)))
-    else
-        return Gradine(grp, AbstractGradineColumn[], DataTables.Index())
+function Gradine(grp::GrdGroup; kwargs::AbstractVector...)
+    if length(kwargs) == 0  # in this case we see if we can load an existing
+        if "columns" ∈ names(grp)
+            colnames = names(grp["columns"])
+            cols = [gradinecolumn(grp["columns"][n]) for n ∈ colnames]
+            return Gradine(grp, cols, DataTables.Index(Symbol.(colnames)))
+        else
+            return Gradine(grp, AbstractGradineColumn[], DataTables.Index())
+        end
     end
+
+    # attempting to add columns, but some already exist
+    # TODO implement this!
+    if "columns" ∈ HDF5.names(grp)
+        throw(ArgumentError("Must create new Gradine in HDF5 group without columns."))
+    end
+
+    colnames = Symbol[k[1] for k ∈ kwargs]
+    cols_ = [k[2] for k ∈ kwargs]
+    cols = Vector{AbstractGradineColumn}(length(colnames))
+
+    for i ∈ 1:length(colnames)
+        cols[i] = gradinecolumn!(grp["columns"], colnames[i], cols_[i])
+    end
+
+    Gradine(grp, cols, DataTables.Index(colnames))
 end
 
 Gradine(datafile::GrdFile, group_name::String) = Gradine(datafile[group_name])
@@ -505,19 +523,6 @@ function Gradine(grdfile::GrdFile, nrows::Integer; kwargs::DataType...)
     Gradine(grdfile, "/", nrows; kwargs...)
 end
 
-# construct a Gradine from a supplied list of columns
-function Gradine(grp::GrdGroup; kwargs::AbstractVector...)
-    if "columns" ∈ HDF5.names(grp)
-        throw(ArgumentError("Must create new Gradine in HDF5 group without columns."))
-    end
-    colnames = [k[1] for k ∈ kwargs]
-    cols_ = [k[2] for k ∈ kwargs]
-    cols = Vector{AbstractGradineColumn}(length(colnames))
-    for i ∈ 1:length(colnames)
-        cols[i] = gradinecolumn!(grp["columns"], colnames[i], cols_[i])
-    end
-    Gradine(grp, cols, DataTables.Index(colnames))
-end
 #=========================================================================================
     </constructors>
 =========================================================================================#

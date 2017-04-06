@@ -110,7 +110,9 @@ function setindex!(gc::NullableGradineColumn, v::Nullable, idx)
         gc.isnull[idx] = true
     else
         gc.isnull[idx] = false
-        gc.values[idx] = get(v) end v
+        gc.values[idx] = get(v)
+    end
+    v
 end
 
 function setindex!(gc::NullableGradineColumn, v::Any, idx)
