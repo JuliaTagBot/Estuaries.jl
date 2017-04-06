@@ -9,11 +9,7 @@ struct Gradine <: AbstractGradine
     colindex::DataTables.Index
 
     function Gradine(grp::GrdGroup, cols::Vector, idx::DataTables.Index)
-        if !exists(grp, "columns")
-            # if we can't do this we are looking at an invalid group
-            # TODO throw error if that happens
-            g_create(grp, "columns")
-        end
+        !exists(grp, "columns") && g_create(grp, "columns")
         new(grp, cols, idx)
     end
 end
@@ -432,22 +428,28 @@ Base.delete!(g::Gradine, c::Any) = delete!(g, index(g)[c])
 #=========================================================================================
     <constructors>
 =========================================================================================#
+function _gradine_load_existing(grp::GrdGroup)
+    if "columns" ∈ names(grp)
+        colnames = names(grp["columns"])
+        cols = [gradinecolumn(grp["columns"][n]) for n ∈ colnames]
+        return Gradine(grp, cols, DataTables.Index(Symbol.(colnames)))
+    else
+        return Gradine(grp, AbstractGradineColumn[], DataTables.Index())
+    end
+end
+
 function Gradine(grp::GrdGroup; kwargs::AbstractVector...)
     if length(kwargs) == 0  # in this case we see if we can load an existing
-        if "columns" ∈ names(grp)
-            colnames = names(grp["columns"])
-            cols = [gradinecolumn(grp["columns"][n]) for n ∈ colnames]
-            return Gradine(grp, cols, DataTables.Index(Symbol.(colnames)))
-        else
-            return Gradine(grp, AbstractGradineColumn[], DataTables.Index())
-        end
+        return _gradine_load_existing(grp)
     end
 
     # attempting to add columns, but some already exist
     # TODO implement this!
-    if "columns" ∈ HDF5.names(grp)
+    if exists(grp, "columns")
         throw(ArgumentError("Must create new Gradine in HDF5 group without columns."))
     end
+
+    g_create(grp, "columns")
 
     colnames = Symbol[k[1] for k ∈ kwargs]
     cols_ = [k[2] for k ∈ kwargs]
@@ -463,13 +465,13 @@ end
 Gradine(datafile::GrdFile, group_name::String) = Gradine(datafile[group_name])
 Gradine(datafile::GrdFile) = Gradine(datafile, "/")
 
-# TODO update these to accomodate reading
+# TODO replace these with a grdopen method
 function Gradine(filename::String, mode::String, group_name::String)
-    datafile = h5open(filename, mode)
+    datafile = jldopen(filename, mode)
     Gradine(datafile, group_name)
 end
 function Gradine(filename::String, mode::String)
-    datafile = h5open(filename, mode)
+    datafile = jldopen(filename, mode)
     Gradine(datafile)
 end
 function Gradine(filename::String; group_name::String="/", mode::String="r")
@@ -523,6 +525,16 @@ function Gradine(grdfile::GrdFile, nrows::Integer; kwargs::DataType...)
     Gradine(grdfile, "/", nrows; kwargs...)
 end
 
+function Gradine(grp::GrdGroup, data::DataTable)
+    colargs = [(n, data[n]) for n ∈ names(data)]
+    Gradine(grp; colargs...)
+end
+function Gradine(grdfile::GrdFile, group_name::String, data::DataTable)
+    Gradine(grdfile[group_name], data)
+end
+function Gradine(grdfile, data::DataTable)
+    Gradine(grdfile, "/", data)
+end
 #=========================================================================================
     </constructors>
 =========================================================================================#

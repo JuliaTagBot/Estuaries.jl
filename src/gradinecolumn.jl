@@ -110,14 +110,19 @@ function gradinecolumn(grp::GrdGroup)
     colname = group_name(grp)
     leaves = Set(names(grp))
 
-    # this is surely not the most efficient way of doing this
+    # TODO this is a quick and dirty way of determining the eltype of columns.
+    # There should be away to get it properly from JLD metadata.
+    # As far as I can tell, this should be ok except in cases where columns have mixed types.
+
     if Set(["values"]) == leaves
         dset = grp["values"]
-        return GradineColumn{eltype(dset)}(dset) 
+        dtype = eltype(dset[1])
+        return GradineColumn{dtype}(dset) 
     elseif Set(["values", "isnull"]) == leaves
         dset = grp["values"]
         dset_isnull = grp["isnull"]
-        return NullableGradineColumn{eltype(dset)}(dset, dset_isnull)
+        dtype = eltype(dset[1])
+        return NullableGradineColumn{dtype}(dset, dset_isnull)
     else
         throw(ArgumentError("Attempted to construct column from invalid HDF5 group."))
     end
