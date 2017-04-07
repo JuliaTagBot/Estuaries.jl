@@ -3,17 +3,16 @@ __precompile__(true)
 module Gradines
 
 #= TODO
-    Implementing strings in HDF5 is a huge pain in the ass.  One alternative is to use JLD
-    which has done this already, but at the cost of losing easy compatibility with python.
-
-    For now the size of the Gradine will have to be declared when it is first built.
+    Make Gradines completely generic! 
+    Gradines should wrap a Data.Source!
 =#
 
 
 using DataTables
-using DataStreams
 using JLD
 using HDF5
+
+importall DataStreams
 
 import Base.convert
 import Base: length, size
