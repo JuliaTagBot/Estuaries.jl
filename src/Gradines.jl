@@ -9,8 +9,8 @@ module Gradines
 
 
 using DataTables
-using JLD
-using HDF5
+# using JLD
+# using HDF5
 
 importall DataStreams
 
@@ -39,11 +39,8 @@ import HDF5.name
 
 =#
 
-
 include("abstracts.jl")
 include("utils.jl")
-include("gradinecolumn.jl")
-include("nullablegradinecolumn.jl")
 include("gradine.jl")
 include("datastreams.jl")
 
