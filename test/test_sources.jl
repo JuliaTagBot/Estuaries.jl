@@ -1,10 +1,10 @@
 using DataTables
-using Gradines
+using Estuaries
 
-const nrows = 100
+const nrows = 10
 
 data = DataTable(A=rand(nrows), B=[randstring(5) for i ∈ 1:nrows])
 
-g = Gradine(data)
+E = Estuary(data)
 
 

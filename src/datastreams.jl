@@ -1,40 +1,40 @@
 #=========================================================================================
     datastreams.jl
 
-    This is the datastreams interface for gradines.  Basically just re-implements
+    This is the datastreams interface for Estuaries.  Basically just re-implements
     the interface for its source.
 =========================================================================================#
 
 #=========================================================================================
     <source interface>
 =========================================================================================#
-Data.schema(g::Gradine) = g.schema
-schema(g::Gradine) = Data.schema(g)
-schema!(g::Gradine) = (g.schema = Data.schema(src))
+Data.schema(E::Estuary) = E.schema
+schema(E::Estuary) = Data.schema(E)
+schema!(E::Estuary) = (E.schema = Data.schema(E.src))
 export schema, schema!
 
-Data.isdone(g::Gradine, row, col) = Data.isdone(g.src, row, col)
-Data.reference(g::Gradine) = Data.reference(g.src)
+Data.isdone(E::Estuary, row, col) = Data.isdone(E.src, row, col)
+Data.reference(E::Estuary) = Data.reference(E.src)
 
 # size is implemented in the Base interface section in gradine.jl
 
-Data.schema(g::Gradine, ::Type{Data.Field}) = Data.schema(g.src, Data.Field)
+Data.schema(E::Estuary, ::Type{Data.Field}) = Data.schema(E.src, Data.Field)
 
-Data.streamtype(g::Gradine, ::Type{Data.Field}) = Data.streamtype(g.src, Data.Field)
+Data.streamtype(E::Estuary, ::Type{Data.Field}) = Data.streamtype(E.src, Data.Field)
 
 # this for both regular and nullable types
-function Data.streamfrom{T}(g::Gradine, ::Type{Data.Field}, ::Type{T}, row, col)
-    Data.streamfrom(g.src, Data.Field, T, row, col)
+function Data.streamfrom{T}(E::Estuary, ::Type{Data.Field}, ::Type{T}, row, col)
+    Data.streamfrom(E.src, Data.Field, T, row, col)
 end
 
 
-Data.schema(g::Gradine, ::Type{Data.Column}) = Data.schema(g.src, Data.Column)
+Data.schema(E::Estuary, ::Type{Data.Column}) = Data.schema(E.src, Data.Column)
 
-Data.streamtype(g::Gradine, ::Type{Data.Column}) = Data.streamtype(g.src, Data.Column)
+Data.streamtype(E::Estuary, ::Type{Data.Column}) = Data.streamtype(E.src, Data.Column)
 
 # this for both regular and nullable types
-function Data.streamfrom{T}(g::Gradine, ::Type{Data.Column}, ::Type{T}, col)
-    Data.streamfrom(g.src, Data.Column, T, col)
+function Data.streamfrom{T}(E::Estuary, ::Type{Data.Column}, ::Type{T}, col)
+    Data.streamfrom(E.src, Data.Column, T, col)
 end
 #=========================================================================================
     </source interface>
@@ -44,26 +44,26 @@ end
 #=========================================================================================
     <sink interface>
 =========================================================================================#
-Data.streamtypes(g::Gradine) = Data.streamptypes(sink)
+Data.streamtypes(E::Estuary) = Data.streamptypes(sink)
 
 # does this need special constructors???
 
-function Data.streamto!(g::Gradine, ::Type{Data.Field}, val, row, col)
-    Data.streamto!(g.sink, Data.Field, val, row, col)
+function Data.streamto!(E::Estuary, ::Type{Data.Field}, val, row, col)
+    Data.streamto!(E.sink, Data.Field, val, row, col)
 end
-function Data.streamto!(g::Gradine, ::Type{Data.Field}, val, row, col, schema::Data.Schema)
-    Data.streamto!(g.sink, Data.Field, val, row, col, schema)
-end
-
-function Data.streamto!(g::Gradine, ::Type{Data.Column}, v, row, col)
-    Data.streamto!(g.sink, Data.Column, v, row, col)
-end
-function Data.streamto!(g::Gradine, ::Type{Data.Column}, v, row, col, schema::Data.Schema)
-    Data.streamto!(g.sink, Data.Column, v, row, col, schema)
+function Data.streamto!(E::Estuary, ::Type{Data.Field}, val, row, col, schema::Data.Schema)
+    Data.streamto!(E.sink, Data.Field, val, row, col, schema)
 end
 
-Data.cleanup!(g::Gradine) = Data.cleanup!(g.sink)
-Data.close!(g::Gradine) = Data.close!(g.sink)
+function Data.streamto!(E::Estuary, ::Type{Data.Column}, v, row, col)
+    Data.streamto!(E.sink, Data.Column, v, row, col)
+end
+function Data.streamto!(E::Estuary, ::Type{Data.Column}, v, row, col, schema::Data.Schema)
+    Data.streamto!(E.sink, Data.Column, v, row, col, schema)
+end
+
+Data.cleanup!(E::Estuary) = Data.cleanup!(E.sink)
+Data.close!(E::Estuary) = Data.close!(E.sink)
 #=========================================================================================
     </sink interface>
 =========================================================================================#
@@ -71,6 +71,9 @@ Data.close!(g::Gradine) = Data.close!(g.sink)
 
 #=========================================================================================
     <schema extensions>  consider adding to DataStreams.jl
+
+    Note that usually objects with the DataStreams interface do not support operations
+    that change the schema. That was probably the original intention.
 =========================================================================================#
 function altercolumn!{T}(schema::Data.Schema, idx::Integer, name::String, ::Type{T})
     schema.header[idx] = name
@@ -87,8 +90,8 @@ function insertcolumn!{T}(schema::Data.Schema, idx::Integer, name::String, ::Typ
 end
 
 function appendcolumn!{T}(schema::Data.Schema, name::String, ::Type{T})
-    append!(schema.header, name)
-    append!(schema.types, T)
+    push!(schema.header, name)
+    push!(schema.types, T)
     schema.cols += 1
     schema.index[name] = schema.cols
     schema
