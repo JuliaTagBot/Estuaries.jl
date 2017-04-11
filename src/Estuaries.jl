@@ -16,6 +16,7 @@ import Base.empty!, Base.delete!
 import Base: insert!, merge!
 import Base.isnull
 import Base.show
+import Base.haskey
 
 import DataTables.index
 import DataTables.eltypes

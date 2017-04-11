@@ -18,22 +18,10 @@ struct Estuary <: AbstractEstuary
     sink::Any  # this must be something with a Data.Sink interface, void if empty
 
     schema::Data.Schema
-    colindex::DataTables.Index  # we keep this around for efficient lookups
 
-    function Estuary(src, sink, schema::Data.Schema, colindex::DataTables.Index)
-        new(src, sink, schema, colindex)
-    end
-    function Estuary(src, sink, schema::Data.Schema)
-        new(src, sink, schema, DataTables.Index(schema))
-    end
-    function Estuary(src, sink)
-        sch = Data.schema(src)
-        new(src, sink, sch, DataTables.Index(sch))
-    end
-    function Estuary(srcsink)
-        sch = Data.schema(srcsink)
-        new(srcsink, srcsink, sch, DataTables.Index(sch))
-    end
+    Estuary(src, sink, schema::Data.Schema) = new(src, sink, schema)
+    Estuary(src, sink) = new(src, sink, Data.schema(src))
+    Estuary(srcsink) = new(srcsink, srcsink, Data.schema(srcsink))
 end
 export Estuary
 
@@ -53,8 +41,6 @@ Base.size(E::Estuary) = size(E.schema)
 DataTables.ncol(E::Estuary) = size(E.schema,2)
 DataTables.nrow(E::Estuary) = size(E.schema,1)
 Base.size(E::Estuary, idx::Integer) = size(E.schema, idx)
-DataTables.index(E::Estuary) = E.colindex
-index!(E::Estuary) = (E.colindex = DataTables.Index(schema))
 Base.names(E::Estuary) = Symbol.(Data.header(E.schema))
 
 Base.copy(E::Estuary) = Estuary(copy(E.src), Data.schema(E.src))
@@ -62,8 +48,8 @@ Base.copy(E::Estuary) = Estuary(copy(E.src), Data.schema(E.src))
 Base.deepcopy(E::Estuary) = Estuary(deepcopy(E.src), deepcopy(E.schema))
 
 Base.eltype(E::Estuary, col::Integer) = Data.types(E.schema)[col]
-Base.eltype(E::Estuary, col::Symbol) = eltype(E, index(E)[col])
-Base.eltype(E::Estuary, col::String) = eltype(E, Symbol(col))
+Base.eltype(E::Estuary, col::String) = eltype(E, E.schema[col])
+Base.eltype(E::Estuary, col::Symbol) = eltype(E, string(col))
 
 DataTables.eltypes(E::Estuary) = Data.types(E.schema)
 function DataTables.eltypes{T<:Union{Integer, Symbol, String}}(E::Estuary,
@@ -98,13 +84,13 @@ end
 
 # E[SingleColumnIndex] ⇒ AbstractVector
 function getindex(E::Estuary, col_ind::ColumnIndex)
-    ncol = index(E)[col_ind]
+    ncol = E.schema[col_ind]
     Data.streamfrom(E, Data.Column, eltype(E, ncol), ncol)
 end
 
 # E[MultiColumnIndex] ⇒ DataTable
 function getindex{T<:ColumnIndex}(E::Estuary, col_inds::AbstractVector{T})
-    ncols = index(E)[col_inds]
+    ncols = E.schema[col_inds]
     dtypes = eltypes(E, ncols)
     cols = Any[Data.streamfrom(E, Data.Column, dtypes[i], ncols[i]) for i ∈ 1:length(ncols)]
     DataTable(cols, DataTables.Index(names(E)[ncols]))
@@ -115,14 +101,14 @@ getindex(E::Estuary, colon::Colon) = copy(E)
 
 # E[SingleRowIndex, SingleColumnIndex] ⇒ Scalar
 function getindex(E::Estuary, row_ind::Integer, col_ind::ColumnIndex)
-    ncol = index(E)[col_ind]
+    ncol = E.schema[col_ind]
     dtype = eltype(E, ncol)
     Data.streamfrom(E, Data.Field, dtype, row_ind, ncol)
 end
 
 # E[SingleRowIndex, MultiColumnIndex] ⇒ DataTable
 function getindex{T<:ColumnIndex}(E::Estuary, row_ind::Integer, col_inds::AbstractVector{T})
-    ncols = index(E)[col_inds]
+    ncols = E.schema[col_inds]
     dtypes = eltypes(E, ncols)
     cols = Vector{Any}(length(ncols))
     for i ∈ 1:length(ncols)
@@ -134,7 +120,7 @@ end
 
 # E[MultiRowIndex, SingleColumnIndex] ⇒ AbstractVector
 function getindex{T<:Integer}(E::Estuary, row_inds::AbstractVector{T}, col_ind::ColumnIndex)
-    ncol = index(E)[col_ind]
+    ncol = E.schema[col_ind]
     dtype = eltype(E, ncol)
     _get_partial_col(E, dtype, row_inds, ncol)
 end
@@ -143,7 +129,7 @@ end
 function getindex{R<:Integer, T<:ColumnIndex}(E::Estuary,
                                               row_inds::AbstractVector{R},
                                               col_inds::AbstractVector{T})
-    ncols = index(E)[col_inds]
+    ncols = E.schema[col_inds]
     dtypes = eltypes(E, ncols)
     cols = Any[_get_partial_col(E, dtypes[i], row_inds, ncols[i]) for i ∈ 1:length(ncols)]
     DataTable(cols, DataTables.Index(names(E)[ncols]))
@@ -189,14 +175,12 @@ end
 # helper functions for insert_single_column!
 function _insert_new_single_column!{T}(E::Estuary, v::AbstractVector{T}, col_ind::Symbol)
     Data.streamto!(E, Data.Column, v, 0, size(E,2)+1, E.schema)
-    push!(index(E), col_ind)
     appendcolumn!(E.schema, string(col_ind), T)
 end
 function _insert_new_single_column!{T}(E::Estuary, v::AbstractVector{T}, col_ind::Integer)
     if isnextcol(E, col_ind)
         name = nextcolname(E)
         Data.streamto!(E, Data.Column, v, 0, size(E,2)+1, E.schema)
-        push!(index(E), name)
         appendcolumn!(E.schema, string(name), T)
     else
         throw(ArgumentError("Cannot assign to non-existent column: $col_ind."))
@@ -204,7 +188,7 @@ function _insert_new_single_column!{T}(E::Estuary, v::AbstractVector{T}, col_ind
 end
 function _insert_existing_single_column!{T}(E::Estuary, v::AbstractVector{T},
                                             col_ind::Symbol)
-    j = index(E)[col_ind]
+    j = E.schema[col_ind]
     Data.streamto!(E, Data.Column, v, 0, j, E.schema)
     altercolumn!(E.schema, j, string(col_ind), T)
 end
@@ -223,7 +207,7 @@ function insert_single_column!(E::Estuary, v::AbstractVector, col_ind::ColumnInd
     if size(E,2) ≠ 0 && size(E,1) ≠ length(v)
         throw(ArgumentError("New columns must have same length as old columns."))
     end
-    if haskey(index(E), col_ind)
+    if haskey(E.schema, col_ind)
         _insert_existing_single_column!(E, v, col_ind)
     else
         _insert_new_single_column!(E, v, col_ind)
@@ -239,8 +223,8 @@ function insert_single_entry!(E::Estuary, v::Any, row_ind::Integer, col_ind::Col
     if E.sink isa Void
         error("This Estuary's data sink is not defined. It doesn't support assignments.")
     end
-    if haskey(index(E), col_ind)
-        j = index(E)[col_ind]
+    if haskey(E.schema, col_ind)
+        j = E.schema[col_ind]
         Data.streamto!(E, Data.Field, v, row_ind, j, E.schema)
     else
         throw(ArgumentError("Cannot assign to non-existent column $col_ind."))
@@ -254,10 +238,10 @@ function insert_multiple_entries!(E::Estuary, v::AbstractVector,
     if E.sink isa Void
         error("This Estuary's data sink is not defined. It doesn't support assignments.")
     end
-    if haskey(index(E), col_ind)
-        j = index(E)[col_ind]
+    if haskey(E.schema, col_ind)
+        j = E.schema[col_ind]
         for i ∈ 1:length(v)
-            Data.streamto!(E, Data.Field, v[i], row_inds[i], col_ind, E.schema)
+            Data.streamto!(E, Data.Field, v[i], row_inds[i], j, E.schema)
         end
     else
         throw(ArgumentError("Cannot assign to non-existent column $col_ind."))
@@ -467,6 +451,9 @@ Base.setindex!(E::Estuary, ::Void, col_ind::Integer) = delete!(E, col_ind)
 =========================================================================================#
 Source(src) = Estuary(src, nothing)
 Sink(sink) = Estuary(nothing, sink)
+
+# note that `Estuary`s lack special Sink constructors, since they must themselves be
+# created from a data source or sink
 #=========================================================================================
     </constructors>
 =========================================================================================#

@@ -113,6 +113,23 @@ function deletecolumn!(schema::Data.Schema, name::String)
     delete!(schema.index, name)
     schema
 end
+
+# for now we leave on bounds checking
+function Base.getindex(sch::Data.Schema, idx::Integer)
+    if !(1 ≤ idx ≤ size(sch,2))
+        throw(ArgumentError("Column index out of bounds."))
+    end
+    idx
+end
+
+Base.getindex(sch::Data.Schema, idx::Symbol) = sch[string(idx)]
+Base.getindex(sch::Data.Schema, idx::AbstractVector{String}) = [sch[i] for i ∈ idx]
+Base.getindex(sch::Data.Schema, idx::AbstractVector{<:Integer}) = [sch[i] for i ∈ idx]
+Base.getindex(sch::Data.Schema, idx::AbstractVector{Symbol}) = [sch[string(i)] for i ∈ idx]
+
+Base.haskey(sch::Data.Schema, idx::Integer) = (1 ≤ idx ≤ size(sch,2))
+Base.haskey(sch::Data.Schema, idx::String) = haskey(sch.index, idx)
+Base.haskey(sch::Data.Schema, idx::Symbol) = haskey(sch.index, string(idx))
 #=========================================================================================
     </schema extensions>
 =========================================================================================#
