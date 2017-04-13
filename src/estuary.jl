@@ -62,6 +62,18 @@ function Base.show(io::IO, E::Estuary)
     println("Estuary $(size(E)); source defined: $(hassource(E)); sink defined: $(hassink(E))")
     show(E.schema)
 end
+
+# these are needed for streamfrom for columns
+_vector_type{T}(::Type{T}) = Vector{T}
+_vector_type{T}(::Type{Nullable{T}}) = NullableVector{T}
+function vector_type{T<:Union{Integer,Symbol,String}}(E::Estuary, col::T)
+    _vector_type(eltype(E, col))
+end
+
+vector_types(E::Estuary) = DataType[vector_type(E,c) for c ∈ 1:size(E,2)]
+function vector_types{T<:Union{Integer,Symbol,String}}(E::Estuary, v::AbstractVector{T})
+    DataType[vector_type(E,c) for c ∈ v]
+end
 #=========================================================================================
     </interface>
 =========================================================================================#
@@ -85,13 +97,13 @@ end
 # E[SingleColumnIndex] ⇒ AbstractVector
 function getindex(E::Estuary, col_ind::ColumnIndex)
     ncol = E.schema[col_ind]
-    Data.streamfrom(E, Data.Column, eltype(E, ncol), ncol)
+    Data.streamfrom(E, Data.Column, vector_type(E, ncol), ncol)
 end
 
 # E[MultiColumnIndex] ⇒ DataTable
 function getindex{T<:ColumnIndex}(E::Estuary, col_inds::AbstractVector{T})
     ncols = E.schema[col_inds]
-    dtypes = eltypes(E, ncols)
+    dtypes = vector_types(E, ncols)
     cols = Any[Data.streamfrom(E, Data.Column, dtypes[i], ncols[i]) for i ∈ 1:length(ncols)]
     DataTable(cols, DataTables.Index(names(E)[ncols]))
 end

@@ -13,7 +13,6 @@ end
 # data = DataTable(A=rand(nrows), B=[randstring(5) for i ∈ 1:nrows])
 # makefeather("testfile.feather", data)
 
-
-E = Estuary(Feather.Source("testfile.feather"))
+E = Estuary(Feather.Source("testfile.feather"), Feather.Sink("testfile.feather"))
 
 
