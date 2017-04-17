@@ -17,8 +17,4 @@ end
 s = Feather.Source(filename)
 E = Estuaries.Source(s)
 
-# this gets the third column
-# ptr = convert(Ptr{Float64}, pointer(s.data) + s.ctable.columns[3].values.offset + 0)
-# A = unsafe_wrap(Array, ptr, s.ctable.num_rows)
-
 

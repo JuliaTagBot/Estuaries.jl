@@ -477,6 +477,8 @@ Sink(sink) = Estuary(nothing, sink)
 DataTables.head(E::Estuary, nrows::Integer=5) = E[1:nrows, :]
 DataTables.tail(E::Estuary, nrows::Integer=5) = E[(end-nrows):end, :]
 
+Base.convert(::Type{DataTable}, E::Estuary) = E[1:size(E,1), 1:size(E,2)]
+
 export head, tail
 #=========================================================================================
     </accessors>
