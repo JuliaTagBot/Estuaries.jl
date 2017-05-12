@@ -93,6 +93,7 @@ Alright, that's my attempt.  Everything I didn't mention here I'd keep pretty mu
 1. allow partial column streaming, 
 2. allow `Data.stream!` to cycle through either rows first or columns first and 
 3. that we simplify the (currently very confusing) typing situation for the end users.
+
 I'm sure those who wrote `DataStreams` in the first place will have lots of ideas about where this goes wrong (or perhaps it would go so wrong they'll reject it
 outright).
 
