@@ -11,7 +11,7 @@ not be settled on).  There are $\ge 3$ major problems which need to be addressed
    the optimal way of calling said API's depends on the binary format.  (This is largely just the distinction between row-wise and column-wise data.)
 
 I think `DataStreams` should attempt to solve 2 and 3 by providing a way to create a uniform interface for any type of data source/sink by writing a bare
-minimum ($\ll 100$ lines of code in most cases) interface.  It should be take as little time and effort as possible to implement `DataStreams` on a new tabular
+minimum ($\ll 100$ lines of code in most cases) interface.  It should take as little time and effort as possible to implement `DataStreams` on a new tabular
 data source/sink, I believe that was the original goal.  I think the special properties of Julia (speed, multiple-dispatch/overloading, metaprogramming) present
 us with a unique opportunity to do this well.
 
@@ -56,8 +56,9 @@ serialized in rows (I think, regardless they are easier to access by row, whethe
 
 ### Batching
 It should be possible to do streaming in batches.  This is because, depending on the nature of the source and sink, data may be stored in memory when streaming,
-which becomes a problem it is too big for memory.  This is only a problem if internally `Data.streamfrom` involves some sort of buffering.  I haven't thought
-this through yet, but I think it should involve the optional declaration of something like `Data.batchsize(src)`.
+which becomes a problem if it is too big for memory.  This is only a problem if internally `Data.streamfrom` involves some sort of buffering.  I haven't thought
+this through yet, but I think it should involve the optional declaration of something like `Data.batchsize(src)`.  We should probably implement the above before
+working on batching, but we should keep in mind that we ultimately want to be able to do it.
 
 
 ## Overhaul of `Data.streamto!`
@@ -70,9 +71,9 @@ This one is harder.  Here's my stab at it (again, typing handled by schemas, see
 These are analogous to `Data.streamfrom`.
 
 ### Typing
-When streaming one field at a time, a single `convert(Tsnk, val)` is called in `Data.stream!` where `Tsnk` is the element type of the sink column and `val` is
-the output of `Data.streamfrom`.  If this would fail, users are required to compensate for this using the `transforms` dictionary (`DataStreams` won't make any
-further guesses about how to achieve the conversion.
+When streaming one field at a time, a single `convert(Tsnk, val)` for each element is called in `Data.stream!` where `Tsnk` is the element type of the sink
+column and `val` is the output of `Data.streamfrom`.  If this would fail, users are required to compensate for this using the `transforms` dictionary
+(`DataStreams` won't make any further guesses about how to achieve the conversion).
 
 When streaming one column (or partial column) at a time, a single `convert(Data.vectortype(snk, Tsnk), val)` is called in `Data.stream!` where `Tsnk` is the
 element type of the sink column and `val` is the output (vector) from `Data.streamfrom`.  As with sources, `Data.vectortype(snk, Tsnk)` will default to
@@ -89,7 +90,9 @@ Again, for now let's inherit any sort of batching from the source, eventually we
 
 ## Conclusion
 Alright, that's my attempt.  Everything I didn't mention here I'd keep pretty much the same.  The three really crucial pieces of this (in my mind) are that we
-1. allow partial column streaming, 2. allow `Data.stream!` to cycle through either rows first or columns first and 3. that we simplify the (currently very
-confusing) typing situation for the end users.  I'm sure those who wrote `DataStreams` in the first place will have lots of ideas about where this goes wrong
-(or perhaps it would go so wrong they'll reject it outright).
+1. allow partial column streaming, 
+2. allow `Data.stream!` to cycle through either rows first or columns first and 
+3. that we simplify the (currently very confusing) typing situation for the end users.
+I'm sure those who wrote `DataStreams` in the first place will have lots of ideas about where this goes wrong (or perhaps it would go so wrong they'll reject it
+outright).
 
