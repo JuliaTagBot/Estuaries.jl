@@ -4,7 +4,7 @@ module Estuaries
 
 using Reexport
 
-using DataTables
+using DataFrames
 @reexport using DataStreams
 
 import Base.convert
@@ -18,10 +18,10 @@ import Base.isnull
 import Base.show
 import Base.haskey
 
-import DataTables.index
-import DataTables.eltypes
-import DataTables: ncol, nrow
-import DataTables: head, tail
+import DataFrames.index
+import DataFrames.eltypes
+import DataFrames: ncol, nrow
+import DataFrames: head, tail
 
 include("abstracts.jl")
 include("utils.jl")

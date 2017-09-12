@@ -38,8 +38,8 @@ hassink(E::Estuary) = !(E.sink isa Void)
 export hassource, hassink
 
 Base.size(E::Estuary) = size(E.schema)
-DataTables.ncol(E::Estuary) = size(E.schema,2)
-DataTables.nrow(E::Estuary) = size(E.schema,1)
+DataFrames.ncol(E::Estuary) = size(E.schema,2)
+DataFrames.nrow(E::Estuary) = size(E.schema,1)
 Base.size(E::Estuary, idx::Integer) = size(E.schema, idx)
 Base.names(E::Estuary) = Symbol.(Data.header(E.schema))
 
@@ -51,8 +51,8 @@ Base.eltype(E::Estuary, col::Integer) = Data.types(E.schema)[col]
 Base.eltype(E::Estuary, col::String) = eltype(E, E.schema[col])
 Base.eltype(E::Estuary, col::Symbol) = eltype(E, string(col))
 
-DataTables.eltypes(E::Estuary) = Data.types(E.schema)
-function DataTables.eltypes{T<:Union{Integer, Symbol, String}}(E::Estuary,
+DataFrames.eltypes(E::Estuary) = Data.types(E.schema)
+function DataFrames.eltypes{T<:Union{Integer, Symbol, String}}(E::Estuary,
                                                                v::AbstractVector{T})
     DataType[eltype(E, c) for c ∈ v]
 end
@@ -100,12 +100,12 @@ function getindex(E::Estuary, col_ind::ColumnIndex)
     Data.streamfrom(E, Data.Column, vector_type(E, ncol), ncol)
 end
 
-# E[MultiColumnIndex] ⇒ DataTable
+# E[MultiColumnIndex] ⇒ DataFrame
 function getindex{T<:ColumnIndex}(E::Estuary, col_inds::AbstractVector{T})
     ncols = E.schema[col_inds]
     dtypes = vector_types(E, ncols)
     cols = Any[Data.streamfrom(E, Data.Column, dtypes[i], ncols[i]) for i ∈ 1:length(ncols)]
-    DataTable(cols, DataTables.Index(names(E)[ncols]))
+    DataFrame(cols, DataFrames.Index(names(E)[ncols]))
 end
 
 # E[:] ⇒ Estuary
@@ -118,7 +118,7 @@ function getindex(E::Estuary, row_ind::Integer, col_ind::ColumnIndex)
     Data.streamfrom(E, Data.Field, dtype, row_ind, ncol)
 end
 
-# E[SingleRowIndex, MultiColumnIndex] ⇒ DataTable
+# E[SingleRowIndex, MultiColumnIndex] ⇒ DataFrame
 function getindex{T<:ColumnIndex}(E::Estuary, row_ind::Integer, col_inds::AbstractVector{T})
     ncols = E.schema[col_inds]
     dtypes = eltypes(E, ncols)
@@ -127,7 +127,7 @@ function getindex{T<:ColumnIndex}(E::Estuary, row_ind::Integer, col_inds::Abstra
         cols[i] = Vector{dtypes[i]}([Data.streamfrom(E, Data.Field, dtypes[i],
                                                      row_ind, ncols[i])])
     end
-    DataTable(cols, DataTables.Index(names(E)[ncols]))
+    DataFrame(cols, DataFrames.Index(names(E)[ncols]))
 end
 
 # E[MultiRowIndex, SingleColumnIndex] ⇒ AbstractVector
@@ -137,25 +137,25 @@ function getindex{T<:Integer}(E::Estuary, row_inds::AbstractVector{T}, col_ind::
     _get_partial_col(E, dtype, row_inds, ncol)
 end
 
-# E[MultiRowIndex, MultiColumnIndex] ⇒ DataTable
+# E[MultiRowIndex, MultiColumnIndex] ⇒ DataFrame
 function getindex{R<:Integer, T<:ColumnIndex}(E::Estuary,
                                               row_inds::AbstractVector{R},
                                               col_inds::AbstractVector{T})
     ncols = E.schema[col_inds]
     dtypes = eltypes(E, ncols)
     cols = Any[_get_partial_col(E, dtypes[i], row_inds, ncols[i]) for i ∈ 1:length(ncols)]
-    DataTable(cols, DataTables.Index(names(E)[ncols]))
+    DataFrame(cols, DataFrames.Index(names(E)[ncols]))
 end
 
 # E[:, SingleColumnIndex] ⇒ Vector
-# E[:, MultiColumnIndex] ⇒ DataTable
+# E[:, MultiColumnIndex] ⇒ DataFrame
 getindex(E::Estuary, ::Colon, col_ind::ColumnIndex) = E[col_ind]
 getindex(E::Estuary, ::Colon, col_inds::AbstractVector{<:ColumnIndex}) = E[col_inds]
 
-# E[SingleRowIndex, :] ⇒ DataTable
+# E[SingleRowIndex, :] ⇒ DataFrame
 getindex(E::Estuary, row_ind::Integer, col_inds::Colon) = E[[row_ind], col_inds]
 
-# E[MultiRowIndex, :] ⇒ DataTable
+# E[MultiRowIndex, :] ⇒ DataFrame
 function getindex{R<:Integer}(E::Estuary, row_inds::AbstractVector{R}, col_inds::Colon)
     getindex(E, row_inds, 1:size(E,2))
 end
@@ -275,14 +275,14 @@ function Base.setindex!(E::Estuary, v, col_ind::ColumnIndex)
     insert_single_column!(E, upgrade_scalar_nonull(E, v), col_ind)
 end
 
-# E[MultiColumnIndex] = DataTable
-function Base.setindex!(E::Estuary, data::DataTable, col_inds::AbstractVector{<:ColumnIndex})
+# E[MultiColumnIndex] = DataFrame
+function Base.setindex!(E::Estuary, data::DataFrame, col_inds::AbstractVector{<:ColumnIndex})
     for j ∈ 1:length(col_inds)
         insert_single_column!(E, data[j], col_inds[j])
     end
     E
 end
-function Base.setindex!(E::Estuary, data::DataTable, col_inds::AbstractVector{Bool})
+function Base.setindex!(E::Estuary, data::DataFrame, col_inds::AbstractVector{Bool})
     setindex!(E, data, find(col_inds))
 end
 
@@ -328,15 +328,15 @@ function Base.setindex!(E::Estuary, v::Any, row_ind::Real, col_inds::AbstractVec
     setindex!(E, v, row_ind, find(col_inds))
 end
 
-# E[SingleRowIndex, MultiColumnIndex] = 1-row DataTable
-function Base.setindex!(E::Estuary, data::DataTable, row_ind::Integer,
+# E[SingleRowIndex, MultiColumnIndex] = 1-row DataFrame
+function Base.setindex!(E::Estuary, data::DataFrame, row_ind::Integer,
                         col_inds::AbstractVector{<:ColumnIndex})
     for j ∈ 1:length(col_inds)
         insert_single_entry!(E, data[j][1], row_ind, col_inds[j])
     end
     E
 end
-function Base.setindex!(E::Estuary, data::DataTable, row_ind::Integer,
+function Base.setindex!(E::Estuary, data::DataFrame, row_ind::Integer,
                         col_inds::AbstractVector{Bool})
     setindex!(E, data, row_ind, find(col_inds))
 end
@@ -363,23 +363,23 @@ function Base.setindex!(E::Estuary, v::Any, row_inds::AbstractVector{Bool},
     setindex!(E, v, find(row_inds), col_ind)
 end
 
-# E[MultiRowIndex, MultiColumnIndex] = DataTable
-function Base.setindex!(E::Estuary, data::DataTable, row_inds::AbstractVector{<:Integer},
+# E[MultiRowIndex, MultiColumnIndex] = DataFrame
+function Base.setindex!(E::Estuary, data::DataFrame, row_inds::AbstractVector{<:Integer},
                         col_inds::AbstractVector{<:ColumnIndex})
     for j ∈ 1:length(col_inds)
         insert_multiple_entries!(E, data[:, j], row_inds, col_inds[j])
     end
     E
 end
-function Base.setindex!(E::Estuary, data::DataTable, row_inds::AbstractVector{<:Integer},
+function Base.setindex!(E::Estuary, data::DataFrame, row_inds::AbstractVector{<:Integer},
                         col_inds::AbstractVector{Bool})
     setindex!(E, data, row_inds, find(col_inds))
 end
-function Base.setindex!(E::Estuary, data::DataTable, row_inds::AbstractVector{Bool},
+function Base.setindex!(E::Estuary, data::DataFrame, row_inds::AbstractVector{Bool},
                         col_inds::AbstractVector{<:ColumnIndex})
     setindex!(E, data, find(row_inds), col_inds)
 end
-function Base.setindex!(E::Estuary, data::DataTable, row_inds::AbstractVector{Bool},
+function Base.setindex!(E::Estuary, data::DataFrame, row_inds::AbstractVector{Bool},
                         col_inds::AbstractVector{Bool})
     setindex!(E, data, find(row_inds), find(col_inds))
 end
@@ -426,8 +426,8 @@ function Base.setindex!(E::Estuary, v::Any, row_inds::AbstractVector{Bool},
     setindex!(E, v, find(row_inds), find(col_inds))
 end
 
-# E[:] = DataTable; E[:, :] = DataTable
-function Base.setindex!(E::Estuary, data::DataTable, row_inds::Colon,
+# E[:] = DataFrame; E[:, :] = DataFrame
+function Base.setindex!(E::Estuary, data::DataFrame, row_inds::Colon,
                         col_inds::Colon=Colon())
     for n ∈ names(data)
         E[n] = data[n]
@@ -474,10 +474,10 @@ Sink(sink) = Estuary(nothing, sink)
 #=========================================================================================
     <accessors>
 =========================================================================================#
-DataTables.head(E::Estuary, nrows::Integer=5) = E[1:nrows, :]
-DataTables.tail(E::Estuary, nrows::Integer=5) = E[(end-nrows):end, :]
+DataFrames.head(E::Estuary, nrows::Integer=5) = E[1:nrows, :]
+DataFrames.tail(E::Estuary, nrows::Integer=5) = E[(end-nrows):end, :]
 
-Base.convert(::Type{DataTable}, E::Estuary) = E[1:size(E,1), 1:size(E,2)]
+Base.convert(::Type{DataFrame}, E::Estuary) = E[1:size(E,1), 1:size(E,2)]
 
 export head, tail
 #=========================================================================================

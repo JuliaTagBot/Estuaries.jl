@@ -1,5 +1,5 @@
 
 
-DataTables.Index(sch::Data.Schema) = DataTables.Index(Symbol.(Data.header(sch)))
+DataFrames.Index(sch::Data.Schema) = DataFrames.Index(Symbol.(Data.header(sch)))
 
 
