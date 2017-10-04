@@ -54,7 +54,7 @@ Base.eltype(E::Estuary, col::Symbol) = eltype(E, string(col))
 DataFrames.eltypes(E::Estuary) = Data.types(E.schema)
 function DataFrames.eltypes{T<:Union{Integer, Symbol, String}}(E::Estuary,
                                                                v::AbstractVector{T})
-    DataType[eltype(E, c) for c ∈ v]
+    Type[eltype(E, c) for c ∈ v]
 end
 export eltypes
 
@@ -70,9 +70,9 @@ function vector_type{T<:Union{Integer,Symbol,String}}(E::Estuary, col::T)
     _vector_type(eltype(E, col))
 end
 
-vector_types(E::Estuary) = DataType[vector_type(E,c) for c ∈ 1:size(E,2)]
+vector_types(E::Estuary) = Type[vector_type(E,c) for c ∈ 1:size(E,2)]
 function vector_types{T<:Union{Integer,Symbol,String}}(E::Estuary, v::AbstractVector{T})
-    DataType[vector_type(E,c) for c ∈ v]
+    Type[vector_type(E,c) for c ∈ v]
 end
 #=========================================================================================
     </interface>
