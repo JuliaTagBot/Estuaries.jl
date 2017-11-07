@@ -33,8 +33,12 @@ Data.schema(E::Estuary, ::Type{Data.Column}) = Data.schema(E.src, Data.Column)
 Data.streamtype(E::Estuary, ::Type{Data.Column}) = Data.streamtype(E.src, Data.Column)
 
 # this for both regular and nullable types
-function Data.streamfrom{T}(E::Estuary, ::Type{Data.Column}, ::Type{T}, col)
-    Data.streamfrom(E.src, Data.Column, T, col)
+function Data.streamfrom(E::Estuary, ::Type{Data.Column}, ::Type{T}, row, col) where T
+    Data.streamfrom(E.src, Data.Column, T, row, col)
+end
+# TODO should fix other methods to pass 1 as argument
+function Data.streamfrom(E::Estuary, ::Type{Data.Column}, ::Type{T}, col) where T
+    Data.streamfrom(E, Data.Column, T, 1, col)
 end
 #=========================================================================================
     </source interface>

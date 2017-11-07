@@ -97,7 +97,7 @@ end
 # E[SingleColumnIndex] ⇒ AbstractVector
 function getindex(E::Estuary, col_ind::ColumnIndex)
     ncol = E.schema[col_ind]
-    Data.streamfrom(E, Data.Column, vector_type(E, ncol), ncol)
+    Data.streamfrom(E, Data.Column, eltype(E, ncol), ncol)
 end
 
 # E[MultiColumnIndex] ⇒ DataFrame
